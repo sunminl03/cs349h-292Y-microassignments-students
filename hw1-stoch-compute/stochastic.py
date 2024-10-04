@@ -2,6 +2,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
+from scipy import stats
+# Part Z: Bipolar 
+class BPStochasticComputing:
+
+    @classmethod
+    def to_unip(cls, bip):
+        return 0.5 * (bip+1) 
+    
+    @classmethod
+    def to_bip(cls, unip):
+        return 2(unip-0.5)
+    
+    @classmethod
+    def bip_add(cls, bitstream, bitstream2):
+        assert(len(bitstream) == len(bitstream2))
+        newbitstream = []
+        for i in range(len(bitstream)):
+            X = stats.binom(1, 0.5)
+            if X == 0: 
+                newbitstream.append(bitstream[i])
+            else:
+                newbitstream.append(bitstream2[i])
+        return newbitstream
+
+
+    @classmethod
+    def bip_mul(cls, bitstream, bitstream2):
+        assert(len(bitstream) == len(bitstream2))
+        newbitstream = []
+        for i in range(len(bitstream)):
+           newbitstream.append(bitstream[i] & bitstream2[i] + (1-bitstream[i]) & (1-bitstream2[i]))
+        return newbitstream
+
 class PosStochasticComputing:
     APPLY_FLIPS = False
     APPLY_SHIFTS = False
@@ -10,14 +43,19 @@ class PosStochasticComputing:
     def apply_bitshift(cls, bitstream):
         if not PosStochasticComputing.APPLY_SHIFTS:
             return bitstream
+        for i in range(len(bitstream)-1):
+            if stats.binom(1, 0.0001) == 1:
+                for j in (i, len(bitstream)-len(bitstream)):
+                    bitstream[len(bitstream)-1-j] = bitstream[len(bitstream)-2-j] 
 
-        raise Exception("apply the bitshift error to the bitstream with probability 0.0001")
 
     @classmethod
     def apply_bitflip(self, bitstream):
         if not PosStochasticComputing.APPLY_FLIPS:
             return bitstream
-
+        for i in range(len(bitstream)):
+            if stats.binom(1, 0.0001) == 1:
+                bitstream[i] = ~bitstream[i]
         raise Exception("apply the to the bitstream with probability 0.0001")
 
 
@@ -25,49 +63,65 @@ class PosStochasticComputing:
     @classmethod
     def to_stoch(cls, prob, nbits):
         assert(prob <= 1.0 and prob >= 0.0)
-        raise Exception("convert a decimal value in [0,1] to an <nbit> length bitstream.")
+        X = np.random.binomial(1, prob, nbits)
+        return X
+            
 
     @classmethod
     def stoch_add(cls, bitstream, bitstream2):
         assert(len(bitstream) == len(bitstream2))
-        raise Exception("add two stochastic bitstreams together")
+        newbitstream = []
+        for i in range(len(bitstream)):
+            X = stats.binom(1, 0.5)
+            if X == 0: 
+                newbitstream.append(bitstream[i])
+            else:
+                newbitstream.append(bitstream2[i])
+        return newbitstream
+
 
     @classmethod
     def stoch_mul(cls, bitstream, bitstream2):
         assert(len(bitstream) == len(bitstream2))
-        raise Exception("multiply two stochastic bitstreams together")
-
+        newbitstream = []
+        for i in range(len(bitstream)):
+           newbitstream.append(bitstream[i] & bitstream2[i])
+        return newbitstream
+    
     @classmethod
     def from_stoch(cls, result):
-        raise Exception("convert a stochastic bitstream to a numerical value")
+        x = 0
+        for i in range(len(result)):
+            if result[i] == 1:
+                x = x + 1
+        return x/len(result)
 
 class StochasticComputingStaticAnalysis:
 
     def __init__(self):
-        pass
+        self.precisions = []
 
     def req_length(self, smallest_value):
-        raise Exception("figure out the smallest bitstream length necessary represent the input decimal value. This is also called the precision.")
+        return int(1 / smallest_value)
 
     def stoch_var(self, prec):
-        raise Exception("update static analysis -- the expression contains a variable with precision <prec>.")
-        result_prec = None
-        return result_prec
-
+        self.precisions.append(prec)
+        return prec
 
     def stoch_add(self, prec1, prec2):
-        raise Exception("update static analysis -- the expression adds together two bitstreams with precisions <prec1> and <prec2> respectively.")
-        result_prec = None
+        result_prec = max(prec1, prec2)  
+        self.precisions.append(result_prec)
         return result_prec
 
 
     def stoch_mul(self, prec1, prec2):
-        raise Exception("update static analysis -- the expression multiplies together two bitstreams with precisions <prec1> and <prec2> respectively.")
-        result_prec = None
-        return res_prec
+        result_prec = prec1 * prec2  
+        self.precisions.append(result_prec)
+        return result_prec
 
     def get_size(self):
-        raise Exception("get minimum bitstream length required by computation.")
+        smallest_precision = min(self.precisions)
+        return self.req_length(smallest_precision)
 
 
 
@@ -164,7 +218,7 @@ def PART_Z_execute_rng_efficient_computation(value,N,save_rngs=True):
     return reference_value, PosStochasticComputing.from_stoch(result)
 
 
-
+"""
 print("---- part a: effect of length on stochastic computation ---")
 ntrials = 10000
 run_stochastic_computation(lambda : PART_A_example_computation(bitstream_len=10), ntrials)
@@ -183,7 +237,7 @@ print("---- part x: effect of bit shifts ---")
 run_stochastic_computation(lambda : PART_A_example_computation(bitstream_len=1000), ntrials)
 PosStochasticComputing.APPLY_FLIPS = False
 PosStochasticComputing.APPLY_SHIFTS =False
-
+"""
 
 # Part Y, apply static analysis
 print("---- part y: apply static analysis ---")
